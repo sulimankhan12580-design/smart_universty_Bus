@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # smart_bus_test
 
 A new Flutter project.
@@ -15,3 +16,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# smart_universty_Bus
+Smart University Bus Seat Tracking and Reservation System using Flutter. 5. UVAS SWAT
+>>>>>>> 5b71231b87670b40dfbb33c3abc369da5262580a
