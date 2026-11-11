@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart Bus',
       theme: appTheme,
-      home: const AuthGate(),
+         home: const AuthGate(),
     );
   }
 }
