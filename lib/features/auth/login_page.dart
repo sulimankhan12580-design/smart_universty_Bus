@@ -24,11 +24,11 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _submit() async {
     if (_email.text.trim().isEmpty || _password.text.length < 6) {
-      _show('Email likhein aur password kam az kam 6 characters ka rakhein');
+      _show('Enter your email and a password of at least 6 characters');
       return;
     }
     if (_isRegister && _name.text.trim().isEmpty) {
-      _show('Naam likhein');
+      _show('Full name likhein');
       return;
     }
     setState(() => _busy = true);
@@ -75,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
                   if (_isRegister) ...[
                     TextField(
                       controller: _name,
-                      decoration: const InputDecoration(labelText: 'Naam'),
+                      decoration: const InputDecoration(labelText: 'Full name'),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -123,8 +123,8 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () =>
                         setState(() => _isRegister = !_isRegister),
                     child: Text(_isRegister
-                        ? 'Pehle se account hai? Login'
-                        : 'Naya account banayein'),
+                        ? 'Already have an account? Login'
+                        : 'Create a new account'),
                   ),
                 ],
               ),

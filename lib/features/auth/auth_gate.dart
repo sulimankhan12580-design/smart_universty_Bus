@@ -31,11 +31,11 @@ class AuthGate extends StatelessWidget {
             if (!s.hasData || !s.data!.exists) return const _Loading();
             final d = s.data!.data()!;
             if (d['status'] == 'blocked') {
-              return const _Message('Aap ka account block hai.');
+              return const _Message('Your account has been blocked.');
             }
             if (d['status'] == 'pending') {
               return const _Message(
-                  'Aap ka account approval ke intezar mein hai.');
+                  'Your account is waiting for approval.');
             }
             switch (d['role']) {
               case 'superadmin':
