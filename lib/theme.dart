@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
-const kGreen = Color(0xFF00A251);
-const kNavy = Color(0xFF0B1E5B);
-const kSky = Color(0xFF0090D8);
+const kGreen = Color(0xFF149444);
+const kNavy = Color(0xFF1C1C78);
+const kSky = Color(0xFF00A8D8);
+
+
 
 final appTheme = ThemeData(
   useMaterial3: true,
