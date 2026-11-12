@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'trip_detail.dart';
+import 'manage_seats.dart';
 
 class DriverHomeScreen extends StatelessWidget {
   const DriverHomeScreen({super.key});
 
+  // Open Trip Details
   Future<void> openTripDetails(BuildContext context) async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -15,6 +17,8 @@ class DriverHomeScreen extends StatelessWidget {
           .get();
 
       if (snapshot.docs.isEmpty) {
+        if (!context.mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No trips found in database.'),
@@ -37,9 +41,53 @@ class DriverHomeScreen extends StatelessWidget {
         ),
       );
     } catch (e) {
+      if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading trip: $e'),
+        ),
+      );
+    }
+  }
+
+  // Open Manage Seats
+  Future<void> openManageSeats(BuildContext context) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('trips')
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No trips found in database.'),
+          ),
+        );
+        return;
+      }
+
+      final tripDoc = snapshot.docs.first;
+
+      if (!context.mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ManageSeatsScreen(
+            tripId: tripDoc.id,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading seats: $e'),
         ),
       );
     }
@@ -51,224 +99,280 @@ class DriverHomeScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF5F8FF),
 
       appBar: AppBar(
+        title: const Text('Driver Dashboard'),
         backgroundColor: const Color(0xFF1769D2),
         foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Driver Dashboard',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined),
-          ),
-        ],
+        centerTitle: true,
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('trips')
+            .limit(1)
+            .snapshots(),
 
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
+          }
 
-            const Text(
-              'Welcome, Driver!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
 
-            const SizedBox(height: 5),
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text('No trips available.'),
+            );
+          }
 
-            const Text(
-              'Manage your university bus',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
-              ),
-            ),
+          final trip = snapshot.data!.docs.first.data();
 
-            const SizedBox(height: 20),
+          final busNumber = trip['busNumber'] ?? 'N/A';
+          final routeName = trip['routeName'] ?? 'N/A';
+          final departureTime = trip['departureTime'] ?? 'N/A';
 
-            // Bus Information Card - Firestore Connected
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
 
-            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('trips')
-                  .limit(1)
-                  .snapshots(),
-
-              builder: (context, snapshot) {
-                if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Text(
-                    'Firestore Error: ${snapshot.error}',
-                  );
-                }
-
-                if (!snapshot.hasData ||
-                    snapshot.data!.docs.isEmpty) {
-                  return const Text(
-                    'No trips found in database.',
-                  );
-                }
-
-                final trip = snapshot.data!.docs.first.data();
-
-                final busNumber =
-                    trip['busNumber'] ?? 'Not assigned';
-
-                final routeName =
-                    trip['routeName'] ?? 'Not assigned';
-
-                final departureTime =
-                    trip['departureTime'] ?? 'Not set';
-
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1769D2),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-
-                      const Icon(
-                        Icons.directions_bus,
-                        color: Colors.white,
-                        size: 40,
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      const Text(
-                        'University Bus',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      Text(
-                        'Bus No: $busNumber',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                        ),
-                      ),
-
-                      Text(
-                        'Route: $routeName',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                        ),
-                      ),
-
-                      Text(
-                        'Departure: $departureTime',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 25),
-
-            const Text(
-              'Seat Overview',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                Expanded(
-                  child: seatCard(
-                    'Available',
-                    '20',
-                    Colors.green,
-                    Icons.event_seat,
+                // Welcome Section
+                const Text(
+                  'Welcome, Driver!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(height: 5),
 
-                Expanded(
-                  child: seatCard(
-                    'Booked',
-                    '10',
-                    Colors.orange,
-                    Icons.airline_seat_recline_normal,
+                const Text(
+                  'Manage your university bus operations.',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
                   ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // University Bus Card
+                Card(
+                  color: Colors.white,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.directions_bus,
+                              color: Color(0xFF1769D2),
+                              size: 30,
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'University Bus',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        infoRow('Bus Number', busNumber.toString()),
+                        infoRow('Route', routeName.toString()),
+                        infoRow('Departure', departureTime.toString()),
+
+                        const SizedBox(height: 15),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => openTripDetails(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1769D2),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.all(13),
+                            ),
+                            child: const Text('View Trip Details'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                // Seat Overview
+                const Text(
+                  'Seat Overview',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: overviewCard(
+                        'Total Seats',
+                        '20',
+                        Icons.event_seat,
+                        Colors.blue,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: overviewCard(
+                        'Reserved Seats',
+                        '10',
+                        Icons.bookmark,
+                        Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 25),
+
+                // Driver Controls
+                const Text(
+                  'Driver Controls',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                controlCard(
+                  context,
+                  Icons.event_seat,
+                  'Manage Seats',
+                  'View and update seat status',
+                  onTap: () => openManageSeats(context),
+                ),
+
+                controlCard(
+                  context,
+                  Icons.people,
+                  'Student Reservations',
+                  'View student booking details',
+                ),
+
+                controlCard(
+                  context,
+                  Icons.directions_bus,
+                  'Bus Information',
+                  'View trip and bus details',
+                  onTap: () => openTripDetails(context),
+                ),
+
+                controlCard(
+                  context,
+                  Icons.notifications,
+                  'Notifications',
+                  'View important notifications',
                 ),
               ],
             ),
+          );
+        },
+      ),
+    );
+  }
 
-            const SizedBox(height: 25),
+  // Information Row
+  Widget infoRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
 
-            const Text(
-              'Driver Controls',
-              style: TextStyle(
-                fontSize: 20,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+            ),
+          ),
+
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Overview Card
+  Widget overviewCard(
+      String title,
+      String count,
+      IconData icon,
+      Color color,
+      ) {
+    return Card(
+      color: Colors.white,
+      elevation: 1,
+
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 30),
+
+            const SizedBox(height: 10),
+
+            Text(
+              count,
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
             ),
 
-            const SizedBox(height: 15),
-
-            controlCard(
-              context,
-              Icons.event_seat,
-              'Manage Seats',
-              'View and update seat status',
-            ),
-
-            controlCard(
-              context,
-              Icons.people,
-              'Student Reservations',
-              'Check reserved student seats',
-            ),
-
-            controlCard(
-              context,
-              Icons.directions_bus,
-              'Bus Information',
-              'View bus details and route',
-              onTap: () => openTripDetails(context),
-            ),
-
-            controlCard(
-              context,
-              Icons.notifications_active,
-              'Notifications',
-              'Manage student notifications',
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12),
             ),
           ],
         ),
@@ -276,44 +380,7 @@ class DriverHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget seatCard(
-      String title,
-      String count,
-      Color color,
-      IconData icon,
-      ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-      ),
-
-      child: Column(
-        children: [
-
-          Icon(icon, color: color, size: 30),
-
-          const SizedBox(height: 10),
-
-          Text(
-            count,
-            style: const TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          Text(
-            title,
-            style: TextStyle(color: color),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // Driver Control Card
   Widget controlCard(
       BuildContext context,
       IconData icon,
