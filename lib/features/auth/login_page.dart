@@ -64,6 +64,8 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Image.asset('assets/logo.png', height: 150),
+                  const SizedBox(height: 16),
                   const Icon(Icons.directions_bus, size: 64),
                   const SizedBox(height: 8),
                   Text(

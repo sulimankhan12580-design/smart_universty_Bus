@@ -1,3 +1,4 @@
+import 'package:smartbus/features/student/my_bookings_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:smartbus/features/student/seat_select_page.dart';
@@ -16,7 +17,14 @@ class StudentHome extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student'),
-        actions: [
+        actions: [IconButton(
+  icon: const Icon(Icons.receipt_long),
+  tooltip: 'My Bookings',
+  onPressed: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const MyBookingsPage()),
+  ),
+),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => AuthService().logout(),
