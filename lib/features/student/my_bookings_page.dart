@@ -25,7 +25,7 @@ class MyBookingsPage extends StatelessWidget {
           }
           final list = snap.data!.docs.map((d) => d.data()).toList();
           String key(Map<String, dynamic> r) =>
-              '${r['date'] ?? ''} ${r['time'] ?? ''}';
+              '${r['date'] ?? ''} ${r['departureTime'] ?? ''}';
           list.sort((a, b) => key(b).compareTo(key(a)));
 
           final active = list.where((r) => r['status'] != 'cancelled').toList();
@@ -65,7 +65,7 @@ class MyBookingsPage extends StatelessWidget {
                             child: ListTile(
                               title: Text('${r['routeName'] ?? 'Trip'}'),
                               subtitle: Text(
-                                '${r['date'] ?? ''} ${r['time'] ?? ''}\n'
+                                '${r['date'] ?? ''} ${r['departureTime'] ?? ''}\n'
                                 'Bus ${r['busNumber'] ?? ''} | '
                                 'Seat ${r['seatNo'] ?? ''} | '
                                 '${r['receiptNo'] ?? ''}\n'
