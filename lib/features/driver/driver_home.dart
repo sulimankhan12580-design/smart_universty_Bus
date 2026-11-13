@@ -1,3 +1,4 @@
+import 'package:smartbus/features/reports/reports_page.dart';
 import 'package:smartbus/features/driver/driver_trip_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,12 +28,20 @@ class DriverHome extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Driver'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => AuthService().logout(),
+              actions: [
+        IconButton(
+          icon: const Icon(Icons.bar_chart),
+          tooltip: 'Reports',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ReportsPage()),
           ),
-        ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () => AuthService().logout(),
+        ),
+      ],
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance

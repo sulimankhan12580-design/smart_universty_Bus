@@ -1,6 +1,8 @@
+import 'package:smartbus/features/reports/reports_page.dart';
 import 'package:flutter/material.dart';
 import 'package:smartbus/features/admin/admin_dashboard_page.dart';
 import 'package:smartbus/features/admin/admin_setup_page.dart';
+import 'package:smartbus/features/reports/reports_page.dart';
 import 'package:smartbus/services/auth_service.dart';
 
 class AdminHome extends StatelessWidget {
@@ -11,12 +13,20 @@ class AdminHome extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Super Admin'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => AuthService().logout(),
-          ),
-        ],
+      actions: [
+  IconButton(
+    icon: const Icon(Icons.bar_chart),
+    tooltip: 'Reports',
+    onPressed: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ReportsPage()),
+    ),
+  ),
+  IconButton(
+    icon: const Icon(Icons.logout),
+    onPressed: () => AuthService().logout(),
+  ),
+],
       ),
       body: Center(
         child: Padding(
@@ -32,6 +42,15 @@ class AdminHome extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.dashboard),
                 label: const Text('Dashboard: students, drivers, trips'),
+              ),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReportsPage()),
+                ),
+                icon: const Icon(Icons.bar_chart),
+                label: const Text('Reports: daily and monthly'),
               ),
               const SizedBox(height: 14),
               FilledButton.icon(
