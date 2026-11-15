@@ -1,5 +1,7 @@
+
 import 'package:smartbus/features/reports/reports_page.dart';
 import 'package:smartbus/features/driver/driver_trip_page.dart';
+import 'package:smartbus/features/driver/gps_tracking_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,68 +11,136 @@ import 'package:smartbus/theme.dart';
 class DriverHome extends StatelessWidget {
   const DriverHome({super.key});
 
+  // Shared GPS tracking service
+  static final GpsTrackingService _gpsTrackingService =
+  GpsTrackingService();
+
   String get _today {
     final n = DateTime.now();
     return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _setStatus(String tripId, String status) {
-    return FirebaseFirestore.instance.collection('trips').doc(tripId).update({
-      'status': status,
-      if (status == 'running') 'startedAt': FieldValue.serverTimestamp(),
-      if (status == 'completed') 'endedAt': FieldValue.serverTimestamp(),
-    });
+  // Start and End Trip with GPS tracking
+  Future<void> _setStatus(
+      BuildContext context,
+      String tripId,
+      String status,
+      ) async {
+    try {
+      if (status == 'running') {
+        // Start GPS tracking
+        await _gpsTrackingService.startTracking(tripId);
+      }
+
+      // Update trip status in Firestore
+      await FirebaseFirestore.instance
+          .collection('trips')
+          .doc(tripId)
+          .update({
+        'status': status,
+        if (status == 'running')
+          'startedAt': FieldValue.serverTimestamp(),
+        if (status == 'completed')
+          'endedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (status == 'completed') {
+        // Stop GPS tracking
+        await _gpsTrackingService.stopTracking();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status == 'running'
+                ? 'Trip started. GPS tracking is active.'
+                : 'Trip completed. GPS tracking stopped.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (status == 'running') {
+        await _gpsTrackingService.stopTracking();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Trip error: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser!.uid;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Driver'),
-              actions: [
-        IconButton(
-          icon: const Icon(Icons.bar_chart),
-          tooltip: 'Reports',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ReportsPage()),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Reports',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ReportsPage(),
+              ),
+            ),
           ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout),
-          onPressed: () => AuthService().logout(),
-        ),
-      ],
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => AuthService().logout(),
+          ),
+        ],
       ),
+
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('trips')
             .where('date', isEqualTo: _today)
             .snapshots(),
+
         builder: (context, snap) {
-          if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}'));
           }
+
+          if (!snap.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
           final docs = snap.data!.docs.where((d) {
             final id = d.data()['driverId'];
             return id == null || id == uid;
           }).toList();
-          docs.sort((a, b) => '${a.data()['departureTime']}'
-              .compareTo('${b.data()['departureTime']}'));
+
+          docs.sort(
+                (a, b) => '${a.data()['departureTime']}'
+                .compareTo('${b.data()['departureTime']}'),
+          );
 
           if (docs.isEmpty) {
-            return const Center(child: Text('No trips for today'));
+            return const Center(
+              child: Text('No trips for today'),
+            );
           }
+
           return ListView(
             padding: const EdgeInsets.all(12),
             children: [
-              Text("Today's trips ($_today)",
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                "Today's trips ($_today)",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 8),
-              for (final d in docs) _tripCard(context, d),
+
+              for (final d in docs)
+                _tripCard(context, d),
             ],
           );
         },
@@ -79,55 +149,91 @@ class DriverHome extends StatelessWidget {
   }
 
   Widget _tripCard(
-      BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> d) {
+      BuildContext context,
+      QueryDocumentSnapshot<Map<String, dynamic>> d,
+      ) {
     final t = d.data();
     final status = '${t['status']}';
-    final canStart = status == 'scheduled' || status == 'open';
+
+    final canStart =
+        status == 'scheduled' || status == 'open';
+
     final running = status == 'running';
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${t['routeName'] ?? 'Trip'}',
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              '${t['routeName'] ?? 'Trip'}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
             const SizedBox(height: 4),
-            Text('${t['departureTime']}  |  Bus ${t['busNumber']}'),
-            Text('Seats booked: ${t['reservedCount'] ?? 0}'),
-            Text('Status: ${status.toUpperCase()}',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: status == 'completed' ? Colors.grey : kGreen)),
+
+            Text(
+              '${t['departureTime']}  |  Bus ${t['busNumber']}',
+            ),
+
+            Text(
+              'Seats booked: ${t['reservedCount'] ?? 0}',
+            ),
+
+            Text(
+              'Status: ${status.toUpperCase()}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: status == 'completed'
+                    ? Colors.grey
+                    : kGreen,
+              ),
+            ),
+
             const SizedBox(height: 10),
+
             OutlinedButton(
-  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
-  onPressed: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => DriverTripPage(
-        tripId: d.id,
-        title: '${t['routeName']}  ${t['departureTime']}',
-      ),
-    ),
-  ),
-  child: const Text('Boarding list'),
-),
-const SizedBox(height: 8),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 42),
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DriverTripPage(
+                    tripId: d.id,
+                    title:
+                    '${t['routeName']}  ${t['departureTime']}',
+                  ),
+                ),
+              ),
+              child: const Text('Boarding list'),
+            ),
+
+            const SizedBox(height: 8),
+
             if (canStart)
               FilledButton(
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 42)),
-                onPressed: () => _setStatus(d.id, 'running'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                ),
+                onPressed: () =>
+                    _setStatus(context, d.id, 'running'),
                 child: const Text('Start trip'),
               ),
+
             if (running)
               FilledButton(
                 style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 42),
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white),
-                onPressed: () => _setStatus(d.id, 'completed'),
+                  minimumSize: const Size(0, 42),
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () =>
+                    _setStatus(context, d.id, 'completed'),
                 child: const Text('End trip'),
               ),
           ],
